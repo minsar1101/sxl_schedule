@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SXL Ops Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a1412;
+  --surface: #101c19;
+  --surface2: #172723;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e6efec;
+  --muted: #6d827b;
+  --accent: #4fe3c1;         /* мята — основной акцент */
+  --accent2: #4cc9e8;        /* вторичный */
+  --deep: #0d3d35;           /* корпоративный тёмно-бирюзовый */
+  --on-accent: #04150f;      /* текст на мятной плашке */
+
+  /* event type colours — carried over from the WC round palette */
+  --marketing: #2d1f5e;  --marketing-fg: #a78bfa;
+  --incident:  #e24b4a;  --incident-fg:  #ffffff;
+  --record:    #0f3a2a;  --record-fg:    #34d399;
+  --top-event: #3a2a0a;  --top-event-fg: #fbbf24;
+  --release:   #1e3a5f;  --release-fg:   #60a5fa;
+
+  --cell-w: 78px;
+  --row-h: 20px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  min-height: 100vh;
+}
+a { color: var(--accent2); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Header ── */
+header {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.logo {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+  letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+}
+.logo-badge {
+  background: var(--accent); color: var(--on-accent); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 1px;
+}
+.header-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+
+/* ── Controls ── */
+.controls {
+  padding: 12px 32px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.ctrl-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ctrl-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+select, button, input[type=date] {
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border2); border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  padding: 5px 10px; cursor: pointer; outline: none;
+  transition: border-color 0.15s, color 0.15s; color-scheme: dark;
+}
+select:hover, button:hover, input[type=date]:hover { border-color: rgba(255,255,255,0.3); }
+.toggle { color: var(--muted); }
+.toggle[aria-pressed="true"] { color: var(--text); border-color: var(--border2); }
+.toggle[aria-pressed="false"] { opacity: 0.5; }
+.toggle .dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+.toggle .cnt { color: var(--muted); font-size: 10px; margin-left: 5px; }
+.btn-preset.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.btn-accent { color: var(--accent); border-color: rgba(79,227,193,0.45); }
+.spacer { flex: 1; }
+
+/* ── Stats ── */
+.stats { padding: 14px 32px; border-bottom: 1px solid var(--border); display: flex; gap: 0; flex-wrap: wrap; }
+.stat { flex: 1; padding: 8px 20px; border-right: 1px solid var(--border); min-width: 120px; }
+.stat:first-child { padding-left: 0; }
+.stat:last-child { border-right: none; }
+.stat-n { font-size: 26px; font-weight: 700; font-family: 'Syne', sans-serif; line-height: 1; }
+.stat-n.sm { font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+.stat-n.acc { color: var(--accent); }
+.stat-l { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Tabs ── */
+.tabs { padding: 0 32px; border-bottom: 1px solid var(--border); display: flex; }
+.tab {
+  padding: 12px 18px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); cursor: pointer; background: none;
+  border: none; border-bottom: 2px solid transparent; border-radius: 0; transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* ── Grid ── */
+.cal-wrap { padding: 20px 32px; overflow-x: auto; }
+table.cal { border-collapse: collapse; width: max-content; }
+table.cal th {
+  font-size: 10px; color: var(--muted); padding: 4px 2px; text-align: center;
+  white-space: nowrap; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg); z-index: 10; font-weight: 400;
+}
+th.hcol { position: sticky; left: 0; z-index: 20; min-width: 52px; background: var(--bg); }
+td.hlbl {
+  position: sticky; left: 0; background: var(--bg); font-size: 10px; color: var(--muted);
+  padding: 0 8px 0 0; text-align: right; border-right: 1px solid var(--border);
+  z-index: 5; white-space: nowrap; vertical-align: middle; height: var(--row-h);
+}
+td.hlbl.night { color: rgba(109,130,123,0.5); }
+td.cell {
+  width: var(--cell-w); min-width: var(--cell-w); height: var(--row-h);
+  border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 0; vertical-align: top;
+}
+td.cell:last-child { border-right: 1px solid var(--border); }
+td.cell.empty:hover { background: var(--surface2); }
+td.cell.weekend { background: rgba(255,255,255,0.015); }
+td.cell.now { box-shadow: inset 0 0 0 1px rgba(79,227,193,0.5); }
+th.month-sep, td.month-sep { border-left: 1px solid rgba(255,255,255,0.2) !important; }
+.month-label { font-size: 9px; color: rgba(255,255,255,0.25); display: block; text-align: center; letter-spacing: 0.5px; }
+.day-label { display: block; text-align: center; }
+th.today .day-label { color: var(--accent); font-weight: 700; }
+
+.cellrow { display: flex; gap: 1px; height: var(--row-h); }
+.cslot { flex: 1; min-width: 0; }
+.chip {
+  height: 100%; width: 100%;
+  display: flex; align-items: center; gap: 3px;
+  padding: 0 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.2px;
+  overflow: hidden; white-space: nowrap; cursor: pointer;
+  background: var(--tb); color: var(--tf);
+  box-shadow: inset 3px 0 0 var(--tsev);
+  transition: filter 0.1s;
+}
+.chip:hover { filter: brightness(1.3); }
+.chip.first { border-radius: 3px 3px 0 0; }
+.chip.last { border-radius: 0 0 3px 3px; }
+.chip.first.last { border-radius: 3px; }
+.chip .flags { font-size: 9px; letter-spacing: -0.5px; flex: none; line-height: 1; }
+.chip .code { opacity: 0.95; }
+td.cell.multi .chip .code { display: none; }
+td.cell.multi .chip { padding: 0 1px; gap: 1px; }
+td.cell.multi .chip .flags { font-size: 8px; letter-spacing: -1px; }
+.chip.sev5 { outline: 1px solid var(--tf); outline-offset: -1px; }
+.chip.open.last { border-bottom: 2px dashed var(--tf); }
+
+/* heatmap mode */
+td.heat-1 { background: rgba(79,227,193,0.12); }
+td.heat-2 { background: rgba(79,227,193,0.28); }
+td.heat-3 { background: rgba(79,227,193,0.46); }
+td.heat-4 { background: rgba(79,227,193,0.65); }
+.heat-n { font-size: 10px; font-weight: 700; color: var(--accent); text-align: center; display: block; line-height: var(--row-h); }
+td.heat-3 .heat-n, td.heat-4 .heat-n { color: var(--on-accent); }
+
+/* ── Legend ── */
+.legend {
+  padding: 12px 32px; border-top: 1px solid var(--border);
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── List ── */
+.list-wrap { padding: 20px 32px; overflow-x: auto; }
+table.lst { border-collapse: collapse; width: 100%; font-size: 11px; }
+table.lst th {
+  color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+  text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border2);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+table.lst th:hover { color: var(--text); }
+table.lst td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: top; }
+table.lst tbody tr { cursor: pointer; }
+table.lst tbody tr:hover { background: var(--surface2); }
+td.t-title { white-space: normal; min-width: 240px; max-width: 460px; }
+.tag { display: inline-flex; align-items: center; gap: 5px; border-radius: 3px; padding: 1px 6px;
+  font-size: 10px; background: var(--tb); color: var(--tf); }
+.sev-box { display: inline-block; min-width: 22px; text-align: center; border-radius: 3px; padding: 0 4px; font-size: 10px; }
+.muted { color: var(--muted); }
+.empty-msg { padding: 40px; text-align: center; color: var(--muted); }
+.arw { color: var(--accent); }
+
+/* ── Tooltip ── */
+#tooltip {
+  position: fixed; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 14px; font-size: 11px; pointer-events: none;
+  z-index: 999; max-width: 320px; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+#tt-head { font-size: 10px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tt-ev { margin-bottom: 6px; line-height: 1.5; }
+.tt-ev:last-child { margin-bottom: 0; }
+.tt-ev .tt-t { color: var(--text); font-weight: 700; }
+.tt-ev .tt-m { color: var(--muted); font-size: 10px; }
+
+/* ── Detail drawer ── */
+#scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 900; opacity: 0;
+  pointer-events: none; transition: opacity 0.15s; }
+#scrim.show { opacity: 1; pointer-events: auto; }
+#detail {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); z-index: 950;
+  background: var(--surface); border-left: 1px solid var(--border2);
+  transform: translateX(100%); transition: transform 0.18s ease; padding: 22px; overflow-y: auto;
+}
+#detail.show { transform: none; }
+#detail h2 { font-size: 16px; font-weight: 600; margin: 12px 0 4px; line-height: 1.35; font-family: 'Syne', sans-serif; }
+#detail .close { position: absolute; top: 14px; right: 16px; }
+#detail .desc { white-space: pre-wrap; margin: 14px 0 18px; line-height: 1.6; font-size: 12px; }
+#detail dl { display: grid; grid-template-columns: 100px 1fr; gap: 7px 12px; font-size: 11px; }
+#detail dt { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; padding-top: 2px; }
+#detail dd { word-break: break-word; }
+
+footer { padding: 14px 32px 40px; color: var(--muted); font-size: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
+footer .ver { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px; }
+
+@media (max-width: 700px) {
+  header, .controls, .stats, .tabs, .cal-wrap, .list-wrap, .legend, footer { padding-left: 14px; padding-right: 14px; }
+  .stat { min-width: 100px; padding: 8px 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">SXL Ops Calendar <span class="logo-badge">SXL</span></div>
+    <div class="header-sub" style="margin-top:5px;">
+      Что происходит, когда и насколько больно · Moscow timezone · <span id="filter-desc">все события</span>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Вид</span>
+    <select id="mode">
+      <option value="type">По типам</option>
+      <option value="heat">Тепловая карта</option>
+    </select>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Инстанс</span>
+    <span id="f-instance"></span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Тип</span>
+    <span id="f-type"></span>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Период</span>
+    <span id="f-preset"></span>
+    <input type="date" id="f-from" aria-label="с">
+    <span class="muted">—</span>
+    <input type="date" id="f-to" aria-label="по">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Sev ≥</span>
+    <select id="f-sev">
+      <option value="">любая</option><option value="2">2</option>
+      <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <button class="toggle" id="f-hours" aria-pressed="false">Только часы со стартами</button>
+  </div>
+  <span class="spacer"></span>
+  <div class="ctrl-group">
+    <button class="btn-accent" id="btn-copy">Скопировать ссылку</button>
+    <button id="btn-reset">Сбросить</button>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="cal">Часовая сетка</button>
+  <button class="tab" data-tab="list">Список</button>
+</div>
+
+<div id="pane-cal" class="pane active">
+  <div class="cal-wrap" id="cal-wrap"></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div id="pane-list" class="pane">
+  <div class="list-wrap">
+    <table class="lst"><thead><tr id="lst-head"></tr></thead><tbody id="lst-body"></tbody></table>
+  </div>
+</div>
+
+<footer>
+  <span class="ver" id="ver"></span>
+  <span id="foot-count"></span>
+  <span>Все времена — MSK. Событие занимает час, если пересекается с ним хотя бы на минуту.</span>
+</footer>
+
+<div id="tooltip"><div id="tt-head"></div><div id="tt-body"></div></div>
+<div id="scrim"></div>
+<aside id="detail" role="dialog" aria-modal="true" aria-label="Событие" hidden></aside>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   BUILD MARKER — поднимать при каждом изменении.
+   GitHub Pages кэширует агрессивно; это единственный способ понять,
+   какую ревизию человек реально видит.
+   ══════════════════════════════════════════════════════════════════════ */
+const BUILD = "2026-07-22.3";
+
+/* ══════════════════════════════════════════════════════════════════════
+   КОНФИГ — инстансы и типы живут здесь, а не в коде рендера.
+   Четвёртый инстанс или шестой тип = правка данных, не правка компонентов.
+   ══════════════════════════════════════════════════════════════════════ */
+const INSTANCES = [
+  { code: "BY", name: "Belarus",    marker: "🇧🇾" },
+  { code: "KZ", name: "Kazakhstan", marker: "🇰🇿" },
+  { code: "ST", name: "Curaçao",    marker: "🏴‍☠️" },
+];
+
+const TYPES = [
+  { code: "marketing", label: "Маркетинг",   short: "MKT", bg: "#2d1f5e", fg: "#a78bfa" },
+  { code: "incident",  label: "Инцидент",    short: "INC", bg: "#e24b4a", fg: "#ffffff" },
+  { code: "record",    label: "Рекорд",      short: "REC", bg: "#0f3a2a", fg: "#34d399" },
+  { code: "top_event", label: "Топ-событие", short: "TOP", bg: "#3a2a0a", fg: "#fbbf24" },
+  { code: "release",   label: "Релиз",       short: "REL", bg: "#1e3a5f", fg: "#60a5fa" },
+];
+
+/* severity → прозрачность левой планки чипа (рампа из WC-хитмапа) */
+const SEV_ALPHA = { 1: 0.14, 2: 0.28, 3: 0.46, 4: 0.65, 5: 0.85 };
+const SEV_DEFAULT_ALPHA = 0.30;
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ДАННЫЕ СОБЫТИЙ — добавлять сюда
+
+   instances : ["BY"] | ["BY","KZ"] | ["BY","KZ","ST"]  ← массив, событие
+               может идти на нескольких инстансах сразу (флаги на чипе)
+   type      : marketing | incident | record | top_event | release
+   start/end : "YYYY-MM-DDTHH:MM" (MSK).  end: null = ещё идёт
+   severity  : 1–5, необязательно
+   id        : стабильный и читаемый: YYYY-MM-DD-<type>-NN
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const EVENTS = [
+  // ── ИЮЛЬ 2026 ─────────────────────────────────────────────────────────
+  { id: "2026-07-01-mkt-01", instances: ["BY"], type: "marketing",
+    title: "Реактивация спящих 60d",
+    desc: "Рассылка + фрибет на сегмент без депозита 60 дней. Охват ~18k. Только BY.",
+    start: "2026-07-01T10:00", end: "2026-07-03T10:00", severity: 2, owner: "CRM" },
+
+  { id: "2026-07-02-rec-01", instances: ["BY"], type: "record",
+    title: "Рекорд: 4 812 регистраций за сутки",
+    desc: "Предыдущий максимум — 4 106 (14.06.2026). Совпало с реактивацией.",
+    start: "2026-07-02T23:00", end: "2026-07-02T23:59", owner: "Analytics" },
+
+  { id: "2026-07-03-rel-01", instances: ["BY", "KZ", "ST"], type: "release",
+    title: "Релиз 4.18.0 — новый кошелёк",
+    desc: "Раскат на все три инстанса, канарейка 10% → 100%.",
+    start: "2026-07-03T03:00", end: "2026-07-03T06:00", severity: 2, owner: "DevOps",
+    link: "https://jira.internal/browse/REL-4180" },
+
+  { id: "2026-07-06-inc-01", instances: ["ST"], type: "incident",
+    title: "Деградация БД: реплика отстала",
+    desc: "Лаг реплики до 40 минут, история ставок показывала устаревшие данные.",
+    start: "2026-07-06T14:20", end: "2026-07-06T16:05", severity: 3, owner: "DevOps",
+    link: "https://jira.internal/browse/INC-2211" },
+
+  { id: "2026-07-08-top-01", instances: ["BY", "KZ", "ST"], type: "top_event",
+    title: "The International (Dota 2) — групповой этап",
+    desc: "Все три инстанса. Ночной трафик на киберспорте x3 к обычному.",
+    start: "2026-07-08T06:00", end: "2026-07-11T18:00", severity: 3, owner: "Product" },
+
+  { id: "2026-07-09-rel-01", instances: ["BY"], type: "release",
+    title: "Релиз 4.18.2 — хотфикс лимитов",
+    start: "2026-07-09T04:00", end: "2026-07-09T06:30", severity: 1, owner: "DevOps" },
+
+  { id: "2026-07-11-top-01", instances: ["KZ"], type: "top_event",
+    title: "WC2026: полуфинал",
+    desc: "Пик онлайна 21:00–23:00 MSK.",
+    start: "2026-07-11T21:00", end: "2026-07-11T23:30", severity: 4, owner: "Product" },
+
+  { id: "2026-07-13-mkt-01", instances: ["KZ"], type: "marketing",
+    title: "Турнир «Летний слот-марафон»",
+    desc: "Призовой 15 млн ₸, лидерборд каждый час.",
+    start: "2026-07-13T00:00", end: "2026-07-16T23:59", severity: 3, owner: "Marketing" },
+
+  { id: "2026-07-14-mkt-02", instances: ["KZ"], type: "marketing",
+    title: "Пуш: бонус к депозиту 100%",
+    desc: "Запущен в 17:30 — за полчаса до инцидента с выводами.",
+    start: "2026-07-14T17:30", end: "2026-07-15T12:00", severity: 2, owner: "CRM" },
+
+  { id: "2026-07-14-inc-01", instances: ["KZ"], type: "incident",
+    title: "Платежи: таймауты на выводах",
+    desc: "Провайдер X отвалился, 3 часа выводы висели в очереди. ~1 240 заявок проведены вручную. Нужен автофолбэк на провайдера Y.",
+    start: "2026-07-14T18:00", end: "2026-07-14T21:00", severity: 4, owner: "DevOps",
+    link: "https://jira.internal/browse/INC-2247" },
+
+  { id: "2026-07-15-rec-01", instances: ["ST"], type: "record",
+    title: "Рекорд: GGR 1.42M за сутки",
+    start: "2026-07-15T23:00", end: "2026-07-15T23:59", owner: "Analytics" },
+
+  { id: "2026-07-17-inc-01", instances: ["BY", "KZ"], type: "incident",
+    title: "Провайдер контента: 502 на слотах",
+    desc: "Игры студии Z отдавали 502 около 25 минут. Затронуто ~6% сессий на двух инстансах.",
+    start: "2026-07-17T20:10", end: "2026-07-17T20:35", severity: 2, owner: "DevOps" },
+
+  { id: "2026-07-19-top-01", instances: ["BY", "KZ", "ST"], type: "top_event",
+    title: "WC2026: финал",
+    desc: "Главное событие сезона. Дежурство усилено на всех инстансах.",
+    start: "2026-07-19T18:00", end: "2026-07-19T23:59", severity: 5, owner: "Product" },
+
+  { id: "2026-07-19-rec-01", instances: ["KZ"], type: "record",
+    title: "Рекорд: 21 400 онлайн одновременно",
+    desc: "Пик в 21:47 MSK, во время финала.",
+    start: "2026-07-19T21:47", end: "2026-07-19T21:47", owner: "Analytics" },
+
+  { id: "2026-07-20-mkt-01", instances: ["BY", "KZ"], type: "marketing",
+    title: "Кэшбэк-неделя",
+    desc: "10% кэшбэк, семь дней, все вертикали.",
+    start: "2026-07-20T00:00", end: "2026-07-26T23:59", severity: 2, owner: "Marketing" },
+
+  { id: "2026-07-21-inc-01", instances: ["ST"], type: "incident",
+    title: "Рост latency на API ставок",
+    desc: "p95 вырос с 180 мс до 900 мс. Причина не установлена, разбор идёт.",
+    start: "2026-07-21T11:00", end: null, severity: 3, owner: "DevOps",
+    link: "https://jira.internal/browse/INC-2263" },
+
+  { id: "2026-07-22-rel-01", instances: ["KZ"], type: "release",
+    title: "Релиз 4.19.0 — фолбэк платёжек",
+    desc: "Автопереключение провайдера по таймауту — следствие INC-2247.",
+    start: "2026-07-22T03:00", end: "2026-07-22T07:00", severity: 3, owner: "DevOps" },
+
+  { id: "2026-07-24-mkt-01", instances: ["BY"], type: "marketing",
+    title: "Фрибеты на матчи сборной",
+    start: "2026-07-24T12:00", end: "2026-07-26T23:59", severity: 1, owner: "CRM" },
+
+  { id: "2026-07-27-mkt-01", instances: ["KZ"], type: "marketing",
+    title: "Реактивация 90d + бонус",
+    start: "2026-07-27T10:00", end: "2026-07-29T10:00", severity: 2, owner: "CRM" },
+
+  // ── АВГУСТ 2026 ───────────────────────────────────────────────────────
+  { id: "2026-08-01-rel-01", instances: ["ST"], type: "release",
+    title: "Релиз 4.20.0 — новая витрина казино",
+    start: "2026-08-01T02:00", end: "2026-08-01T08:00", severity: 3, owner: "DevOps" },
+
+  { id: "2026-08-03-top-01", instances: ["BY", "KZ", "ST"], type: "top_event",
+    title: "Старт сезона АПЛ",
+    desc: "Первый тур. Исторически +35% к обороту на футболе.",
+    start: "2026-08-03T14:00", end: "2026-08-04T23:59", severity: 3, owner: "Product" },
+
+  { id: "2026-08-05-inc-01", instances: ["KZ"], type: "incident",
+    title: "Плохой релиз: откат 4.20.0",
+    desc: "Регресс в расчёте бонусного баланса, откат через 50 минут.",
+    start: "2026-08-05T09:15", end: "2026-08-05T10:05", severity: 4, owner: "DevOps" },
+];
+
+/* ══════════════════════════════════════════════════════════════════════
+   Дальше — только рендер.
+   ══════════════════════════════════════════════════════════════════════ */
+const HOUR = 3600000, DAYMS = 86400000;
+const TYPE_BY = Object.fromEntries(TYPES.map(t => [t.code, t]));
+const INST_BY = Object.fromEntries(INSTANCES.map(i => [i.code, i]));
+const MONTHS = ["ЯНВ","ФЕВ","МАР","АПР","МАЙ","ИЮН","ИЮЛ","АВГ","СЕН","ОКТ","НОЯ","ДЕК"];
+const WD = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+const ALL_HOURS = Array.from({length: 24}, (_, i) => i);
+
+/* даты — наивный MSK: парсим по частям, без таймзонной магии */
+function parseTS(s) {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  return m ? new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0)) : null;
+}
+const p2 = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const floorHour = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours());
+const fmtDate = d => `${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}`;
+const fmtTime = d => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+const fmtDT = d => `${fmtDate(d)} ${fmtTime(d)}`;
+function fmtDur(ms) {
+  const mins = Math.max(1, Math.round(ms / 60000));
+  if (mins < 60) return mins + " мин";
+  const h = Math.floor(mins / 60), m = mins % 60;
+  if (h < 24) return h + " ч" + (m ? " " + m + " мин" : "");
+  const d = Math.floor(h / 24), rh = h % 24;
+  return d + " д" + (rh ? " " + rh + " ч" : "");
+}
+function hexRGBA(hex, a) {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const flagsOf = list => list.map(c => INST_BY[c]?.marker || c).join("");
+
+const NOW = new Date();
+
+/* нормализация: instances всегда массив (строка instance тоже принимается) */
+const DATA = EVENTS.map(e => {
+  const list = Array.isArray(e.instances) ? e.instances : (e.instance ? [e.instance] : []);
+  const s = parseTS(e.start);
+  const en = e.end ? parseTS(e.end) : null;
+  return { ...e, instances: list, _s: s, _e: en, _open: !e.end, _eff: en || NOW };
+}).filter(e => e._s).sort((a, b) => a._s - b._s || a.id.localeCompare(b.id));
+
+/* ── состояние ─────────────────────────────────────── */
+const state = {
+  instances: new Set(INSTANCES.map(i => i.code)),
+  types: new Set(TYPES.map(t => t.code)),
+  from: null, to: null, preset: "month",
+  sev: "", mode: "type", compactHours: false, tab: "cal",
+  sort: { key: "start", dir: 1 },
+};
+
+function applyPreset(p) {
+  state.preset = p;
+  const t0 = startOfDay(NOW);
+  if (p === "week") {
+    const dow = (t0.getDay() + 6) % 7;
+    state.from = new Date(+t0 - dow * DAYMS);
+    state.to = new Date(+state.from + 6 * DAYMS);
+  } else if (p === "month") {
+    state.from = new Date(t0.getFullYear(), t0.getMonth(), 1);
+    state.to = new Date(t0.getFullYear(), t0.getMonth() + 1, 0);
+  } else if (p === "30d") {
+    state.from = new Date(+t0 - 29 * DAYMS);
+    state.to = t0;
+  } else { state.from = null; state.to = null; }
+}
+
+/* ── URL ───────────────────────────────────────────── */
+function readURL() {
+  const q = new URLSearchParams(location.search);
+  const inst = q.get("instance"), ty = q.get("type");
+  if (inst) state.instances = new Set(inst.split(",").map(s => s.trim().toUpperCase()).filter(c => INST_BY[c]));
+  if (ty) state.types = new Set(ty.split(",").map(s => s.trim()).filter(c => TYPE_BY[c]));
+  if (!state.instances.size) state.instances = new Set(INSTANCES.map(i => i.code));
+  if (!state.types.size) state.types = new Set(TYPES.map(t => t.code));
+  const f = q.get("from"), t = q.get("to");
+  if (f || t) { state.preset = null; state.from = f ? parseTS(f) : null; state.to = t ? parseTS(t) : null; }
+  else applyPreset(q.get("preset") || "month");
+  if (q.get("sev")) state.sev = q.get("sev");
+  if (q.get("mode") === "heat") state.mode = "heat";
+  if (q.get("hours") === "compact") state.compactHours = true;
+  if (q.get("tab") === "list") state.tab = "list";
+}
+function writeURL() {
+  const q = new URLSearchParams();
+  if (state.instances.size !== INSTANCES.length) q.set("instance", [...state.instances].join(","));
+  if (state.types.size !== TYPES.length) q.set("type", [...state.types].join(","));
+  if (state.preset && state.preset !== "month") q.set("preset", state.preset);
+  if (!state.preset) {
+    if (state.from) q.set("from", iso(state.from));
+    if (state.to) q.set("to", iso(state.to));
+  }
+  if (state.sev) q.set("sev", state.sev);
+  if (state.mode !== "type") q.set("mode", state.mode);
+  if (state.compactHours) q.set("hours", "compact");
+  if (state.tab !== "cal") q.set("tab", state.tab);
+  const s = q.toString();
+  history.replaceState(null, "", s ? "?" + s : location.pathname);
+}
+
+/* ── диапазон и фильтрация ─────────────────────────── */
+function rangeBounds() {
+  const src = DATA.length ? DATA : [{ _s: NOW, _eff: NOW }];
+  let a = state.from ? startOfDay(state.from) : startOfDay(new Date(Math.min(...src.map(e => +e._s))));
+  let b = state.to ? startOfDay(state.to) : startOfDay(new Date(Math.max(...src.map(e => +e._eff))));
+  if (b < a) b = a;
+  const days = Math.round((b - a) / DAYMS) + 1;
+  if (days > 120) b = new Date(+a + 119 * DAYMS);   // предохранитель от гигантской сетки
+  return { a, b: new Date(+b + DAYMS) };            // b — эксклюзивная граница
+}
+function filtered() {
+  const { a, b } = rangeBounds();
+  const minSev = state.sev ? +state.sev : 0;
+  return DATA.filter(e =>
+    e.instances.some(c => state.instances.has(c)) &&
+    state.types.has(e.type) &&
+    e._s < b && e._eff >= a &&
+    (!minSev || (e.severity || 0) >= minSev)
+  );
+}
+
+/* ── занятые ячейки (день × час) ───────────────────── */
+function cellsOf(e, a, b) {
+  const out = [];
+  let t = floorHour(e._s < a ? a : e._s);
+  const rawEnd = e._open ? new Date(Math.min(+b, +NOW + HOUR)) : e._e;
+  let end = rawEnd;
+  if (+end <= +e._s) end = new Date(+e._s + 1);       // точечное событие → свой час
+  if (+end > +b) end = b;
+  let guard = 0;
+  while (t < end && guard++ < 24 * 130) {
+    out.push(t);
+    const n = new Date(t); n.setHours(n.getHours() + 1); t = n;
+  }
+  return out;
+}
+
+/* ── дорожки (устойчивая вертикальная позиция чипа) ── */
+function assignLanes(evs, a, b) {
+  const laneEnd = [];
+  const occ = new Map();
+  for (const e of evs) {
+    const cells = cellsOf(e, a, b);
+    if (!cells.length) { occ.set(e.id, { cells, lane: 0 }); continue; }
+    const s = +cells[0], en = +cells[cells.length - 1] + HOUR;
+    let lane = laneEnd.findIndex(x => x <= s);
+    if (lane === -1) { lane = laneEnd.length; laneEnd.push(en); } else laneEnd[lane] = en;
+    occ.set(e.id, { cells, lane });
+  }
+  return occ;
+}
+
+/* ── сетка ─────────────────────────────────────────── */
+function buildCalendar(evs) {
+  const { a, b } = rangeBounds();
+  const days = Math.max(1, Math.round((b - a) / DAYMS));
+  const dates = Array.from({ length: days }, (_, i) => new Date(+a + i * DAYMS));
+  const occ = assignLanes(evs, a, b);
+
+  const cellMap = {};                       // "YYYY-MM-DD|H" → [{e, lane, first, last}]
+  for (const e of evs) {
+    const { cells, lane } = occ.get(e.id);
+    const byDay = new Map();
+    for (const t of cells) {
+      const ds = iso(t);
+      if (!byDay.has(ds)) byDay.set(ds, []);
+      byDay.get(ds).push(t);
+    }
+    for (const [ds, list] of byDay) {
+      list.forEach((t, i) => {
+        const k = ds + "|" + t.getHours();
+        (cellMap[k] = cellMap[k] || []).push({ e, lane, first: i === 0, last: i === list.length - 1 });
+      });
+    }
+  }
+
+  let hours = ALL_HOURS;
+  if (state.compactHours) {
+    // «часы со стартами» — где событие действительно начинается, а не тянется
+    hours = ALL_HOURS.filter(h => dates.some(d => (cellMap[iso(d) + "|" + h] || []).some(x => x.first)));
+    if (!hours.length) hours = ALL_HOURS;
+  }
+
+  /* Полосы считаются на колонку-день, а не на строку-час: ширина полосы
+     постоянна внутри дня, поэтому длинное событие рисуется прямой
+     вертикальной лентой без разрывов между часами. */
+  const dayLanes = {};
+  for (const k of Object.keys(cellMap)) {
+    const ds = k.split("|")[0];
+    dayLanes[ds] = dayLanes[ds] || new Set();
+    cellMap[k].forEach(x => dayLanes[ds].add(x.lane));
+  }
+  const daySlot = {};
+  for (const ds of Object.keys(dayLanes)) {
+    const sorted = [...dayLanes[ds]].sort((a, b) => a - b);
+    daySlot[ds] = new Map(sorted.map((l, i) => [l, i]));
+  }
+
+  const todayISO = iso(NOW), nowHour = NOW.getHours();
+  let prevMo = -1;
+  let html = '<table class="cal"><thead><tr><th class="hcol"></th>';
+  dates.forEach((d, i) => {
+    const mo = d.getMonth();
+    const sep = mo !== prevMo && i > 0;
+    const we = [0, 6].includes(d.getDay());
+    const today = iso(d) === todayISO;
+    html += `<th class="${sep ? "month-sep " : ""}${today ? "today" : ""}" style="min-width:var(--cell-w);${we ? "opacity:.65" : ""}">`;
+    html += `<span class="month-label">${mo !== prevMo ? MONTHS[mo] : "&nbsp;"}</span>`;
+    html += `<span class="day-label">${WD[d.getDay()]} ${d.getDate()}</span></th>`;
+    prevMo = mo;
+  });
+  html += "</tr></thead><tbody>";
+
+  for (const h of hours) {
+    const night = h >= 1 && h <= 6;
+    html += `<tr><td class="hlbl${night ? " night" : ""}">${p2(h)}:00</td>`;
+    prevMo = dates.length ? dates[0].getMonth() : -1;
+    for (let i = 0; i < dates.length; i++) {
+      const d = dates[i], ds = iso(d);
+      const sep = i > 0 && d.getMonth() !== dates[i - 1].getMonth();
+      const items = cellMap[ds + "|" + h] || [];
+      const we = [0, 6].includes(d.getDay());
+      let cls = "cell" + (we ? " weekend" : "") + (sep ? " month-sep" : "") + (items.length ? "" : " empty");
+      if (ds === todayISO && h === nowHour) cls += " now";
+
+      if (state.mode === "heat") {
+        if (items.length) cls += " heat-" + Math.min(items.length, 4);
+        html += `<td class="${cls}" data-k="${ds}|${h}">`;
+        html += items.length ? `<span class="heat-n">${items.length}</span>` : "";
+        html += "</td>";
+        continue;
+      }
+
+      const map = daySlot[ds];
+      const n = map ? map.size : 1;
+      if (n > 1) cls += " multi";
+      html += `<td class="${cls}" data-k="${ds}|${h}"><div class="cellrow">`;
+      const slots = new Array(n).fill(null);
+      items.forEach(x => { const si = map ? map.get(x.lane) : 0; if (si != null) slots[si] = x; });
+      for (const x of slots) {
+        if (!x) { html += '<div class="cslot"></div>'; continue; }
+        const t = TYPE_BY[x.e.type] || { bg: "#333", fg: "#ccc", short: "?" };
+        const alpha = SEV_ALPHA[x.e.severity] ?? SEV_DEFAULT_ALPHA;
+        const style = `--tb:${t.bg};--tf:${t.fg};--tsev:${hexRGBA(t.fg, alpha)}`;
+        const cc = ["chip", x.first ? "first" : "", x.last ? "last" : "",
+                    x.e.severity === 5 ? "sev5" : "", x.e._open ? "open" : ""].filter(Boolean).join(" ");
+        html += `<div class="cslot"><div class="${cc}" style="${style}" data-id="${esc(x.e.id)}" title="${esc(x.e.title)}">`;
+        if (x.first) html += `<span class="flags">${flagsOf(x.e.instances)}</span><span class="code">${t.short}</span>`;
+        html += "</div></div>";
+      }
+      html += "</div></td>";
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  document.getElementById("cal-wrap").innerHTML =
+    evs.length ? html : '<div class="empty-msg">Ничего не найдено. Снимите фильтры или расширьте период.</div>';
+
+  return cellMap;
+}
+
+/* ── легенда ───────────────────────────────────────── */
+function buildLegend() {
+  let h = TYPES.map(t =>
+    `<div class="leg-item"><div class="leg-dot" style="background:${t.bg};border:1px solid ${t.fg}"></div>${esc(t.label)} · ${t.short}</div>`
+  ).join("");
+  h += `<div class="leg-item" style="margin-left:8px">${INSTANCES.map(i => i.marker).join(" ")} — флаги инстансов на чипе</div>`;
+  h += `<div class="leg-item">Левая планка чипа = severity</div>`;
+  h += `<div class="leg-item">Чип с флагами = час начала события</div>`;
+  document.getElementById("legend").innerHTML = h;
+}
+
+/* ── статистика ────────────────────────────────────── */
+function buildStats(evs) {
+  const cnt = code => evs.filter(e => e.type === code).length;
+  /* релиз считаем аварийным окном — он лежит в том же счётчике, что инциденты */
+  const risky = evs.filter(e => e.type === "incident" || e.type === "release").length;
+  const open = evs.filter(e => e._open);
+  const cards = [
+    { n: evs.length, l: "Событий в периоде", c: "var(--accent)" },
+    { n: cnt("marketing"), l: "Маркетинг", c: "var(--marketing-fg)" },
+    { n: risky, l: "Инциденты + релизы", c: "#ff7a79" },
+    { n: cnt("top_event"), l: "Топ-события", c: "var(--top-event-fg)" },
+    { n: cnt("record"), l: "Рекорды", c: "var(--record-fg)" },
+  ];
+  if (open.length) cards.push({ n: open[0].title, l: `Открыто: идёт ${fmtDur(NOW - open[0]._s)}`, sm: true });
+  document.getElementById("stats").innerHTML = cards.map(c =>
+    `<div class="stat"><div class="stat-n${c.sm ? " sm" : ""}" style="${c.c ? "color:" + c.c : ""}" title="${esc(c.n)}">${esc(c.n)}</div>
+     <div class="stat-l">${esc(c.l)}</div></div>`).join("");
+}
+
+/* ── фильтры ───────────────────────────────────────── */
+function buildFilters() {
+  document.getElementById("f-instance").innerHTML = INSTANCES.map(i => {
+    const n = DATA.filter(e => e.instances.includes(i.code)).length;
+    return `<button class="toggle" data-inst="${i.code}" aria-pressed="${state.instances.has(i.code)}">
+      ${i.marker || ""} ${i.code}<span class="cnt">${n}</span></button>`;
+  }).join(" ");
+  document.getElementById("f-type").innerHTML = TYPES.map(t => {
+    const n = DATA.filter(e => e.type === t.code).length;
+    return `<button class="toggle" data-type="${t.code}" aria-pressed="${state.types.has(t.code)}">
+      <span class="dot" style="background:${t.fg}"></span>${esc(t.label)}<span class="cnt">${n}</span></button>`;
+  }).join(" ");
+  document.getElementById("f-preset").innerHTML =
+    [["week","Неделя"],["month","Месяц"],["30d","30 дней"],["all","Всё"]]
+      .map(([k, l]) => `<button class="btn-preset${state.preset === k ? " on" : ""}" data-preset="${k}">${l}</button>`).join(" ");
+  document.getElementById("f-from").value = state.from ? iso(state.from) : "";
+  document.getElementById("f-to").value = state.to ? iso(state.to) : "";
+  document.getElementById("f-sev").value = state.sev;
+  document.getElementById("mode").value = state.mode;
+  document.getElementById("f-hours").setAttribute("aria-pressed", String(state.compactHours));
+}
+
+/* ── список ────────────────────────────────────────── */
+const COLS = [
+  { key: "start", label: "Начало", get: e => fmtDT(e._s) },
+  { key: "end", label: "Конец", get: e => e._open ? '<span class="muted">идёт</span>' : fmtDT(e._e) },
+  { key: "dur", label: "Длит.", get: e => fmtDur(e._eff - e._s) },
+  { key: "instances", label: "Инстансы", get: e => `${flagsOf(e.instances)} <span class="muted">${e.instances.join("/")}</span>` },
+  { key: "type", label: "Тип", get: e => {
+      const t = TYPE_BY[e.type] || { bg: "#333", fg: "#ccc", label: e.type };
+      return `<span class="tag" style="--tb:${t.bg};--tf:${t.fg}">${esc(t.label)}</span>`; } },
+  { key: "title", label: "Событие", get: e => esc(e.title), cls: "t-title" },
+  { key: "severity", label: "Sev", get: e => e.severity
+      ? `<span class="sev-box" style="background:${hexRGBA("#4fe3c1", SEV_ALPHA[e.severity])};color:${(e.severity>=4)?"var(--on-accent)":"var(--text)"}">${e.severity}</span>`
+      : '<span class="muted">—</span>' },
+  { key: "owner", label: "Owner", get: e => esc(e.owner || "—") },
+  { key: "link", label: "Ссылка", get: e => e.link
+      ? `<a href="${esc(e.link)}" target="_blank" rel="noopener">jira ↗</a>` : '<span class="muted">—</span>' },
+];
+function sortVal(e, key) {
+  if (key === "start") return +e._s;
+  if (key === "end") return +e._eff;
+  if (key === "dur") return e._eff - e._s;
+  if (key === "severity") return e.severity || 0;
+  if (key === "instances") return e.instances.join(",");
+  return String(e[key] ?? "").toLowerCase();
+}
+function buildList(evs) {
+  document.getElementById("lst-head").innerHTML = COLS.map(c =>
+    `<th data-key="${c.key}">${c.label}${state.sort.key === c.key ? ` <span class="arw">${state.sort.dir > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  const rows = [...evs].sort((x, y) => {
+    const a = sortVal(x, state.sort.key), b = sortVal(y, state.sort.key);
+    return (a > b ? 1 : a < b ? -1 : 0) * state.sort.dir;
+  });
+  document.getElementById("lst-body").innerHTML = rows.length
+    ? rows.map(e => `<tr data-id="${esc(e.id)}">${COLS.map(c => `<td class="${c.cls || ""}">${c.get(e)}</td>`).join("")}</tr>`).join("")
+    : `<tr><td colspan="${COLS.length}"><div class="empty-msg">Ничего не найдено.</div></td></tr>`;
+}
+
+/* ── тултип / карточка ─────────────────────────────── */
+let CELLMAP = {};
+const tt = document.getElementById("tooltip");
+function showTip(key, ev) {
+  const items = CELLMAP[key] || [];
+  if (!items.length) return;
+  const [ds, h] = key.split("|");
+  const d = parseTS(ds);
+  document.getElementById("tt-head").textContent =
+    `${WD[d.getDay()]} ${fmtDate(d)} · ${p2(h)}:00 MSK · ${items.length} соб.`;
+  document.getElementById("tt-body").innerHTML = items.map(({ e }) => {
+    const t = TYPE_BY[e.type] || { label: e.type, fg: "#ccc" };
+    return `<div class="tt-ev">
+      <div class="tt-t" style="color:${t.fg}">${flagsOf(e.instances)} ${esc(e.title)}</div>
+      <div class="tt-m">${esc(t.label)}${e.severity ? " · sev " + e.severity : ""}${e.owner ? " · " + esc(e.owner) : ""}<br>
+      ${fmtDT(e._s)} → ${e._open ? "идёт" : fmtDT(e._e)} · ${fmtDur(e._eff - e._s)}</div></div>`;
+  }).join("");
+  tt.style.display = "block";
+  moveTip(ev);
+}
+function moveTip(ev) {
+  const r = tt.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = Math.max(8, ev.clientY - r.height - 14);
+  tt.style.left = Math.max(8, x) + "px";
+  tt.style.top = y + "px";
+}
+const hideTip = () => { tt.style.display = "none"; };
+
+const detail = document.getElementById("detail"), scrim = document.getElementById("scrim");
+function openDetail(e) {
+  const t = TYPE_BY[e.type] || { label: e.type, bg: "#333", fg: "#ccc" };
+  detail.innerHTML = `
+    <button class="close" data-close>Закрыть ✕</button>
+    <span class="tag" style="--tb:${t.bg};--tf:${t.fg}">${esc(t.label)}</span>
+    <h2>${esc(e.title)}</h2>
+    <div class="desc">${e.desc ? esc(e.desc) : '<span class="muted">Описание не заполнено.</span>'}</div>
+    <dl>
+      <dt>Инстансы</dt><dd>${flagsOf(e.instances)} ${e.instances.map(c => esc(INST_BY[c]?.name || c)).join(", ")}</dd>
+      <dt>Начало</dt><dd>${fmtDT(e._s)} MSK</dd>
+      <dt>Конец</dt><dd>${e._open ? '<span style="color:var(--accent)">ещё идёт</span>' : fmtDT(e._e) + " MSK"}</dd>
+      <dt>Длительность</dt><dd>${fmtDur(e._eff - e._s)}</dd>
+      <dt>Severity</dt><dd>${e.severity || "—"}</dd>
+      <dt>Owner</dt><dd>${esc(e.owner || "—")}</dd>
+      <dt>Ссылка</dt><dd>${e.link ? `<a href="${esc(e.link)}" target="_blank" rel="noopener">${esc(e.link)}</a>` : "—"}</dd>
+      <dt>ID</dt><dd class="muted">${esc(e.id)}</dd>
+    </dl>`;
+  detail.hidden = false;
+  requestAnimationFrame(() => { detail.classList.add("show"); scrim.classList.add("show"); });
+  detail.querySelector("[data-close]").focus();
+}
+function closeDetail() {
+  detail.classList.remove("show"); scrim.classList.remove("show");
+  setTimeout(() => { if (!detail.classList.contains("show")) detail.hidden = true; }, 200);
+}
+
+/* ── рендер ────────────────────────────────────────── */
+const byId = id => DATA.find(e => e.id === id);
+const FDESC = () => {
+  const i = state.instances.size === INSTANCES.length ? "все инстансы" : [...state.instances].join("/");
+  const t = state.types.size === TYPES.length ? "все типы" : [...state.types].map(c => TYPE_BY[c].label).join("/");
+  return i + " · " + t;
+};
+function render() {
+  writeURL();
+  const evs = filtered();
+  buildFilters();
+  CELLMAP = buildCalendar(evs);
+  buildStats(evs);
+  buildList(evs);
+  buildLegend();
+  document.getElementById("filter-desc").textContent = FDESC();
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === state.tab));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === "pane-" + state.tab));
+  document.getElementById("foot-count").textContent = `${DATA.length} событий в файле · показано ${evs.length}`;
+}
+
+/* ── события UI ────────────────────────────────────── */
+document.addEventListener("click", ev => {
+  const inst = ev.target.closest("[data-inst]");
+  if (inst) {
+    const c = inst.dataset.inst;
+    state.instances.has(c) ? state.instances.delete(c) : state.instances.add(c);
+    if (!state.instances.size) state.instances = new Set(INSTANCES.map(i => i.code));
+    return render();
+  }
+  const ty = ev.target.closest("[data-type]");
+  if (ty) {
+    const c = ty.dataset.type;
+    state.types.has(c) ? state.types.delete(c) : state.types.add(c);
+    if (!state.types.size) state.types = new Set(TYPES.map(t => t.code));
+    return render();
+  }
+  const pr = ev.target.closest("[data-preset]");
+  if (pr) { applyPreset(pr.dataset.preset); return render(); }
+  const tab = ev.target.closest(".tab");
+  if (tab) { state.tab = tab.dataset.tab; return render(); }
+  const th = ev.target.closest("th[data-key]");
+  if (th) {
+    const k = th.dataset.key;
+    state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : 1 };
+    return buildList(filtered());
+  }
+  const chip = ev.target.closest(".chip[data-id]");
+  if (chip) { const e = byId(chip.dataset.id); if (e) { hideTip(); openDetail(e); } return; }
+  const row = ev.target.closest("tr[data-id]");
+  if (row) { const e = byId(row.dataset.id); if (e) openDetail(e); return; }
+  const cell = ev.target.closest("td.cell[data-k]");
+  if (cell) {
+    const items = CELLMAP[cell.dataset.k] || [];
+    if (items.length === 1) { hideTip(); openDetail(items[0].e); }
+    return;
+  }
+  if (ev.target.closest("[data-close]") || ev.target === scrim) closeDetail();
+});
+document.addEventListener("mouseover", ev => {
+  const cell = ev.target.closest("td.cell[data-k]");
+  if (cell) showTip(cell.dataset.k, ev); else if (!ev.target.closest("#tooltip")) hideTip();
+});
+document.addEventListener("mousemove", ev => { if (tt.style.display === "block") moveTip(ev); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDetail(); });
+
+document.getElementById("mode").addEventListener("change", e => { state.mode = e.target.value; render(); });
+document.getElementById("f-sev").addEventListener("change", e => { state.sev = e.target.value; render(); });
+document.getElementById("f-from").addEventListener("change", e => {
+  state.preset = null; state.from = e.target.value ? parseTS(e.target.value) : null; render(); });
+document.getElementById("f-to").addEventListener("change", e => {
+  state.preset = null; state.to = e.target.value ? parseTS(e.target.value) : null; render(); });
+document.getElementById("f-hours").addEventListener("click", () => { state.compactHours = !state.compactHours; render(); });
+document.getElementById("btn-reset").addEventListener("click", () => {
+  state.instances = new Set(INSTANCES.map(i => i.code));
+  state.types = new Set(TYPES.map(t => t.code));
+  state.sev = ""; state.mode = "type"; state.compactHours = false;
+  applyPreset("month"); render();
+});
+document.getElementById("btn-copy").addEventListener("click", async e => {
+  const b = e.target;
+  try { await navigator.clipboard.writeText(location.href); b.textContent = "Скопировано ✓"; }
+  catch { b.textContent = "Скопируйте из адресной строки"; }
+  setTimeout(() => { b.textContent = "Скопировать ссылку"; }, 1800);
+});
+
+document.getElementById("ver").textContent = "build " + BUILD;
+readURL();
+render();
+</script>
+</body>
+</html>
