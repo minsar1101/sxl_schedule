@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* WINLINE corporate palette — светлая тема, оранжевый акцент */
+  /* SXL corporate palette — светлая тема, оранжевый акцент */
   --bg: #e9ebef;             /* страница — холодный светло-серый */
   --surface: #ffffff;        /* карточки/панели */
   --surface2: #f2f3f6;       /* инпуты, ховер */
@@ -16,7 +16,7 @@
   --border2: rgba(18,20,23,0.16);
   --text: #14161a;           /* почти чёрный */
   --muted: #6b7280;          /* серый */
-  --accent: #fe5000;         /* WINLINE orange — основной акцент */
+  --accent: #fe5000;         /* orange — основной акцент */
   --accent2: #2563eb;        /* вторичный — ссылки */
   --deep: #cc4000;           /* тёмно-оранжевый */
   --on-accent: #ffffff;      /* текст на оранжевой плашке */
@@ -28,7 +28,7 @@
   --top-event: #ffe9c2;  --top-event-fg: #a86a00;
   --release:   #dbe8ff;  --release-fg:   #2258c8;
 
-  --cell-w: 78px;
+  --cell-w: 64px;
   --row-h: 20px;
 }
 
@@ -153,11 +153,11 @@ th.today .day-label { color: var(--accent); font-weight: 700; }
 .chip.first { border-radius: 3px 3px 0 0; }
 .chip.last { border-radius: 0 0 3px 3px; }
 .chip.first.last { border-radius: 3px; }
-.chip .flags { font-size: 9px; letter-spacing: -0.5px; flex: none; line-height: 1; }
+.chip .flags { font-size: 12px; letter-spacing: -0.5px; flex: none; line-height: 1; }
 .chip .code { opacity: 0.95; }
 td.cell.multi .chip .code { display: none; }
 td.cell.multi .chip { padding: 0 1px; gap: 1px; }
-td.cell.multi .chip .flags { font-size: 8px; letter-spacing: -1px; }
+td.cell.multi .chip .flags { font-size: 10px; letter-spacing: -0.5px; }
 .chip.sev5 { outline: 1px solid var(--tf); outline-offset: -1px; }
 .chip.open.last { border-bottom: 2px dashed var(--tf); }
 
@@ -274,7 +274,7 @@ footer .ver { background: var(--surface); border: 1px solid var(--border); borde
     <input type="date" id="f-to" aria-label="по">
   </div>
   <div class="ctrl-group">
-    <span class="ctrl-label">Sev ≥</span>
+    <span class="ctrl-label">Крит. ≥</span>
     <select id="f-sev">
       <option value="">любая</option><option value="2">2</option>
       <option value="3">3</option><option value="4">4</option><option value="5">5</option>
@@ -324,7 +324,7 @@ footer .ver { background: var(--surface); border: 1px solid var(--border); borde
    GitHub Pages кэширует агрессивно; это единственный способ понять,
    какую ревизию человек реально видит.
    ══════════════════════════════════════════════════════════════════════ */
-const BUILD = "2026-08-05.1";
+const BUILD = "2026-08-05.2";
 
 /* ══════════════════════════════════════════════════════════════════════
    КОНФИГ — инстансы и типы живут здесь, а не в коде рендера.
@@ -337,11 +337,11 @@ const INSTANCES = [
 ];
 
 const TYPES = [
-  { code: "marketing", label: "Маркетинг",   short: "MKT", bg: "#ece7ff", fg: "#6d28d9" },
-  { code: "incident",  label: "Инцидент",    short: "INC", bg: "#e23b34", fg: "#ffffff" },
-  { code: "record",    label: "Рекорд",      short: "REC", bg: "#d6f3e4", fg: "#0a7d4f" },
-  { code: "top_event", label: "Топ-событие", short: "TOP", bg: "#ffe9c2", fg: "#a86a00" },
-  { code: "release",   label: "Релиз",       short: "REL", bg: "#dbe8ff", fg: "#2258c8" },
+  { code: "marketing", label: "Маркетинг",   short: "MKT", bg: "#ece7ff", fg: "#6d28d9", ink: "#6d28d9" },
+  { code: "incident",  label: "Инцидент",    short: "INC", bg: "#e23b34", fg: "#ffffff", ink: "#d11f1f" },
+  { code: "record",    label: "Рекорд",      short: "REC", bg: "#d6f3e4", fg: "#0a7d4f", ink: "#0a7d4f" },
+  { code: "top_event", label: "Топ-событие", short: "TOP", bg: "#ffe9c2", fg: "#a86a00", ink: "#a86a00" },
+  { code: "release",   label: "Релиз",       short: "REL", bg: "#dbe8ff", fg: "#2258c8", ink: "#2258c8" },
 ];
 
 /* severity → прозрачность левой планки чипа (рампа из WC-хитмапа) */
@@ -745,8 +745,8 @@ function buildLegend() {
     `<div class="leg-item"><div class="leg-dot" style="background:${t.bg};border:1px solid ${t.fg}"></div>${esc(t.label)} · ${t.short}</div>`
   ).join("");
   h += `<div class="leg-item" style="margin-left:8px">${INSTANCES.map(i => i.marker).join(" ")} — флаги инстансов на чипе</div>`;
-  h += `<div class="leg-item">Левая планка чипа = severity</div>`;
-  h += `<div class="leg-item">Чип с флагами = час начала события</div>`;
+  h += `<div class="leg-item">Левая планка события = критичность</div>`;
+  h += `<div class="leg-item">Событие с флагами = час начала</div>`;
   document.getElementById("legend").innerHTML = h;
 }
 
@@ -801,7 +801,7 @@ const COLS = [
       const t = TYPE_BY[e.type] || { bg: "#333", fg: "#ccc", label: e.type };
       return `<span class="tag" style="--tb:${t.bg};--tf:${t.fg}">${esc(t.label)}</span>`; } },
   { key: "title", label: "Событие", get: e => esc(e.title), cls: "t-title" },
-  { key: "severity", label: "Sev", get: e => e.severity
+  { key: "severity", label: "Крит.", get: e => e.severity
       ? `<span class="sev-box" style="background:${hexRGBA("#fe5000", SEV_ALPHA[e.severity])};color:${(e.severity>=4)?"var(--on-accent)":"var(--text)"}">${e.severity}</span>`
       : '<span class="muted">—</span>' },
   { key: "owner", label: "Owner", get: e => esc(e.owner || "—") },
@@ -841,8 +841,8 @@ function showTip(key, ev) {
   document.getElementById("tt-body").innerHTML = items.map(({ e }) => {
     const t = TYPE_BY[e.type] || { label: e.type, fg: "#ccc" };
     return `<div class="tt-ev">
-      <div class="tt-t" style="color:${t.fg}">${flagsOf(e.instances)} ${esc(e.title)}</div>
-      <div class="tt-m">${esc(t.label)}${e.severity ? " · sev " + e.severity : ""}${e.owner ? " · " + esc(e.owner) : ""}<br>
+      <div class="tt-t" style="color:${t.ink || t.fg}">${flagsOf(e.instances)} ${esc(e.title)}</div>
+      <div class="tt-m">${esc(t.label)}${e.severity ? " · крит " + e.severity : ""}${e.owner ? " · " + esc(e.owner) : ""}<br>
       ${fmtDT(e._s)} → ${e._open ? "идёт" : fmtDT(e._e)} · ${fmtDur(e._eff - e._s)}</div></div>`;
   }).join("");
   tt.style.display = "block";
@@ -871,7 +871,7 @@ function openDetail(e) {
       <dt>Начало</dt><dd>${fmtDT(e._s)} MSK</dd>
       <dt>Конец</dt><dd>${e._open ? '<span style="color:var(--accent)">ещё идёт</span>' : fmtDT(e._e) + " MSK"}</dd>
       <dt>Длительность</dt><dd>${fmtDur(e._eff - e._s)}</dd>
-      <dt>Severity</dt><dd>${e.severity || "—"}</dd>
+      <dt>Крит.</dt><dd>${e.severity || "—"}</dd>
       <dt>Owner</dt><dd>${esc(e.owner || "—")}</dd>
       <dt>Ссылка</dt><dd>${e.link ? `<a href="${esc(e.link)}" target="_blank" rel="noopener">${esc(e.link)}</a>` : "—"}</dd>
       <dt>ID</dt><dd class="muted">${esc(e.id)}</dd>
