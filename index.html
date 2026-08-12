@@ -131,8 +131,9 @@ td.cell {
 }
 td.cell:last-child { border-right: 1px solid var(--border); }
 td.cell.empty:hover { background: var(--surface2); }
-td.cell.weekend { background: rgba(0,0,0,0.028); }
-td.cell.now { box-shadow: inset 0 0 0 1px rgba(254,80,0,0.7); }
+td.cell.malt { background: rgba(20,22,26,0.030); }
+td.cell.weekend { box-shadow: inset 0 0 0 100px rgba(18,20,23,0.030); }
+td.cell.now { outline: 1px solid rgba(254,80,0,0.7); outline-offset: -1px; }
 th.month-sep, td.month-sep { border-left: 1px solid rgba(0,0,0,0.2) !important; }
 .month-label { font-size: 9px; color: rgba(0,0,0,0.3); display: block; text-align: center; letter-spacing: 0.5px; }
 .day-label { display: block; text-align: center; }
@@ -203,14 +204,18 @@ td.heat-4 .heat-n { color: var(--on-accent); }
 .mday { position: relative; min-height: 98px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
   padding: 4px 4px 6px; cursor: pointer; overflow: hidden; transition: background 0.1s; }
 .mday:first-child { border-left: none; }
-.mday.we { background: rgba(0,0,0,0.015); }
-.mday.oom { background: rgba(0,0,0,0.028); }
-.mday.oom .mdnum { opacity: 0.4; }
-.mday.busy1 { background: rgba(254,80,0,0.05); }
-.mday.busy2 { background: rgba(254,80,0,0.10); }
-.mday.busy3 { background: rgba(254,80,0,0.17); }
-.mday.busy4 { background: rgba(254,80,0,0.26); }
+/* чередование фона по месяцам — видно границы месяцев в длинном периоде.
+   Привязано к началу выбранного периода: текущий месяц светлый, соседний притенён. */
+.mday.malt { background: rgba(20,22,26,0.032); }
 .mday:hover { background: var(--surface2); }
+.mday.oom { opacity: 0.42; }
+/* насыщенность дня — полоска сверху (поверх фона месяца, не конфликтует) */
+.mday.busy1 { box-shadow: inset 0 3px 0 rgba(254,80,0,0.22); }
+.mday.busy2 { box-shadow: inset 0 3px 0 rgba(254,80,0,0.40); }
+.mday.busy3 { box-shadow: inset 0 3px 0 rgba(254,80,0,0.58); }
+.mday.busy4 { box-shadow: inset 0 3px 0 rgba(254,80,0,0.80); }
+.m-trunc { padding: 8px 12px; margin-bottom: 10px; font-size: 11px; color: var(--muted);
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; }
 .mdhead { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; min-height: 16px; margin-bottom: 2px; }
 .mdnum { font-weight: 700; }
 .mday.today .mdnum { background: var(--accent); color: var(--on-accent); border-radius: 4px; padding: 0 5px; }
@@ -399,7 +404,7 @@ footer .ver { background: var(--surface); border: 1px solid var(--border); borde
    GitHub Pages кэширует агрессивно; это единственный способ понять,
    какую ревизию человек реально видит.
    ══════════════════════════════════════════════════════════════════════ */
-const BUILD = "2026-08-12.1730";
+const BUILD = "2026-08-12.1900";
 
 /* ══════════════════════════════════════════════════════════════════════
    КОНФИГ — инстансы и типы живут здесь, а не в коде рендера.
@@ -1141,7 +1146,9 @@ function buildCalendar(evs) {
       const sep = i > 0 && d.getMonth() !== dates[i - 1].getMonth();
       const items = cellMap[ds + "|" + h] || [];
       const we = [0, 6].includes(d.getDay());
-      let cls = "cell" + (we ? " weekend" : "") + (sep ? " month-sep" : "") + (items.length ? "" : " empty");
+      const moff = (d.getFullYear() - dates[0].getFullYear()) * 12 + (d.getMonth() - dates[0].getMonth());
+      const malt = state.mode !== "heat" && (((moff % 2) + 2) % 2) === 1;   // чередование по месяцам
+      let cls = "cell" + (we ? " weekend" : "") + (sep ? " month-sep" : "") + (items.length ? "" : " empty") + (malt ? " malt" : "");
       if (ds === todayISO && h === nowHour) cls += " now";
 
       if (state.mode === "heat") {
@@ -1186,13 +1193,24 @@ function buildCalendar(evs) {
    Полнодневные события — горизонтальные баннеры на неделю (Outlook-style),
    таймовые — списком в ячейке дня; клик по дню открывает часовую сетку. */
 function buildMonth() {
-  const HEADER_H = 20, LANE_H = 17, TIMED_CAP = 3;
-  const { a, b } = rangeBounds();                    // выбранный период [a, b)
+  const HEADER_H = 20, LANE_H = 17, TIMED_CAP = 3, MAX_WEEKS = 110;  // ~2 года
+  /* границы берём из выбранного периода напрямую — независимо от 120-дневного
+     предохранителя часовой сетки, иначе длинный период «обрывался» на ~4 месяцах */
+  const src = DATA.length ? DATA : [{ _s: NOW, _eff: NOW }];
+  const a = state.from ? startOfDay(state.from)
+          : startOfDay(new Date(Math.min(...src.map(e => +e._s))));
+  let selEnd = state.to ? startOfDay(state.to)
+          : startOfDay(new Date(Math.max(...src.map(e => +e._eff))));
+  if (selEnd < a) selEnd = a;
+  const b = new Date(+selEnd + DAYMS);               // эксклюзивная граница [a, b)
   const gridStart = mondayOf(a);
   const lastSel = new Date(+b - DAYMS);
-  const weeks = Math.round((+mondayOf(lastSel) - +gridStart) / (7 * DAYMS)) + 1;
+  let weeks = Math.round((+mondayOf(lastSel) - +gridStart) / (7 * DAYMS)) + 1;
+  const truncated = weeks > MAX_WEEKS;
+  if (truncated) weeks = MAX_WEEKS;
   const cells = weeks * 7;
   const gridEnd = new Date(+gridStart + cells * DAYMS);
+  const baseY = a.getFullYear(), baseM = a.getMonth();   // якорь чередования месяцев
 
   const evs = DATA.filter(e => passesFilters(e) && e._s < gridEnd && e._eff >= gridStart);
   const banner = evs.filter(coversFullDay);
@@ -1240,7 +1258,9 @@ function buildMonth() {
       const inSel = +startOfDay(d) >= +a && +startOfDay(d) < +b;
       const today = iso(d) === todayISO, cnt = dayCount[di] || 0;
       const busy = cnt >= 8 ? "busy4" : cnt >= 5 ? "busy3" : cnt >= 3 ? "busy2" : cnt >= 1 ? "busy1" : "";
-      const cls = ["mday", inSel ? "" : "oom", c >= 5 ? "we" : "", today ? "today" : "", busy].filter(Boolean).join(" ");
+      const monthOff = (d.getFullYear() - baseY) * 12 + (d.getMonth() - baseM);
+      const malt = ((monthOff % 2) + 2) % 2 === 1 ? "malt" : "";
+      const cls = ["mday", inSel ? "" : "oom", malt, today ? "today" : "", busy].filter(Boolean).join(" ");
       html += `<div class="${cls}" data-day="${iso(d)}">`;
       html += `<div class="mdhead"><span class="mdnum">${d.getDate() === 1 ? `<span class="mdmo">${MONTHS[d.getMonth()]}</span> ` : ""}${d.getDate()}</span>${cnt ? `<span class="mdcnt">${cnt}</span>` : ""}</div>`;
       html += `<div class="mbanner-space" style="height:${spaceH}px"></div><div class="mtimed">`;
@@ -1268,7 +1288,10 @@ function buildMonth() {
     html += "</div>";
   }
   html += "</div>";
-  document.getElementById("month-wrap").innerHTML = evs.length ? html
+  const note = truncated
+    ? `<div class="m-trunc">Период длиннее ~2 лет — показаны первые ${MAX_WEEKS} недель от начала. Сузьте период для полного охвата.</div>`
+    : "";
+  document.getElementById("month-wrap").innerHTML = evs.length ? note + html
     : '<div class="empty-msg">Ничего не найдено. Снимите фильтры или расширьте период.</div>';
 }
 
