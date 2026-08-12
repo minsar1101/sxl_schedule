@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SXL Ops Calendar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
   /* WINLINE corporate palette — светлая тема, оранжевый акцент */
@@ -23,7 +23,7 @@
 
   /* event type colours — светлые чипы под белый фон */
   --marketing: #ece7ff;  --marketing-fg: #6d28d9;
-  --incident:  #e23b34;  --incident-fg:  #ffffff;
+  --incident:  #a4162a;  --incident-fg:  #ffffff;
   --record:    #d6f3e4;  --record-fg:    #0a7d4f;
   --top-event: #ffe9c2;  --top-event-fg: #a86a00;
   --release:   #dbe8ff;  --release-fg:   #2258c8;
@@ -52,8 +52,8 @@ header {
   flex-wrap: wrap; gap: 12px;
 }
 .logo {
-  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
-  letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 21px;
+  letter-spacing: -0.8px; display: flex; align-items: center; gap: 10px;
 }
 .logo-badge {
   background: var(--accent); color: var(--on-accent); font-family: 'JetBrains Mono', monospace;
@@ -90,7 +90,7 @@ select:hover, button:hover, input[type=date]:hover { border-color: rgba(255,255,
 .stat { flex: 1; padding: 8px 20px; border-right: 1px solid var(--border); min-width: 120px; }
 .stat:first-child { padding-left: 0; }
 .stat:last-child { border-right: none; }
-.stat-n { font-size: 26px; font-weight: 700; font-family: 'Syne', sans-serif; line-height: 1; }
+.stat-n { font-size: 26px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; line-height: 1; }
 .stat-n.sm { font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
 .stat-n.acc { color: var(--accent); }
@@ -191,6 +191,52 @@ td.heat-4 { background: rgba(254,80,0,0.64); }
 .heat-n { font-size: 10px; font-weight: 700; color: var(--text); text-align: center; display: block; line-height: var(--row-h); }
 td.heat-4 .heat-n { color: var(--on-accent); }
 
+/* ── Месячный вид (Outlook-style, drill-down в часовую сетку) ── */
+.month-wrap { padding: 20px 32px; }
+.mgrid { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface);
+  display: grid; grid-template-columns: repeat(7, 1fr); }
+.mwh { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+  text-align: center; padding: 8px 4px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); background: var(--bg); }
+.mwh:first-child { border-left: none; }
+.mwh.we { color: rgba(107,114,128,0.55); }
+.mweek { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: repeat(7, 1fr); }
+.mday { position: relative; min-height: 98px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 4px 4px 6px; cursor: pointer; overflow: hidden; transition: background 0.1s; }
+.mday:first-child { border-left: none; }
+.mday.we { background: rgba(0,0,0,0.015); }
+.mday.oom { background: rgba(0,0,0,0.028); }
+.mday.oom .mdnum { opacity: 0.4; }
+.mday.busy1 { background: rgba(254,80,0,0.05); }
+.mday.busy2 { background: rgba(254,80,0,0.10); }
+.mday.busy3 { background: rgba(254,80,0,0.17); }
+.mday.busy4 { background: rgba(254,80,0,0.26); }
+.mday:hover { background: var(--surface2); }
+.mdhead { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; min-height: 16px; margin-bottom: 2px; }
+.mdnum { font-weight: 700; }
+.mday.today .mdnum { background: var(--accent); color: var(--on-accent); border-radius: 4px; padding: 0 5px; }
+.mdmo { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 400; }
+.mdcnt { font-size: 9px; color: var(--muted); font-weight: 700; }
+.mbar { position: absolute; height: 15px; display: flex; align-items: center; gap: 3px; padding: 0 5px;
+  font-size: 9px; font-weight: 700; border-radius: 3px; overflow: hidden; white-space: nowrap; cursor: pointer;
+  background: var(--tb); color: var(--tf); box-shadow: inset 3px 0 0 var(--tsev); z-index: 2; }
+.mbar:hover { filter: brightness(0.93); }
+.mbar .flags { font-size: 10px; letter-spacing: -0.5px; flex: none; }
+.mbar.sev5 { outline: 1px solid var(--tf); outline-offset: -1px; }
+.mbar.clip-l { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: none; }
+.mbar.clip-l::before { content: "‹"; margin-right: 1px; }
+.mbar.clip-r { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.mbar.clip-r::after { content: "›"; margin-left: auto; padding-left: 2px; }
+.mchip { display: flex; align-items: center; gap: 4px; font-size: 10px; line-height: 1.55; padding: 0 4px; margin-top: 1px;
+  border-radius: 3px; cursor: pointer; overflow: hidden; white-space: nowrap;
+  background: var(--tb); color: var(--tf); box-shadow: inset 3px 0 0 var(--tsev); }
+.mchip:hover { filter: brightness(0.93); }
+.mchip .mtime { font-weight: 700; flex: none; }
+.mchip .flags { font-size: 10px; letter-spacing: -0.5px; flex: none; }
+.mchip .mtt { overflow: hidden; text-overflow: ellipsis; }
+.m-more { font-size: 9px; color: var(--muted); margin-top: 2px; cursor: pointer; font-weight: 700; }
+.m-more:hover { color: var(--accent); }
+.mback { margin-bottom: 12px; }
+
 /* ── Legend ── */
 .legend {
   padding: 12px 32px; border-top: 1px solid var(--border);
@@ -241,7 +287,7 @@ td.t-title { white-space: normal; min-width: 240px; max-width: 460px; }
   transform: translateX(100%); transition: transform 0.18s ease; padding: 22px; overflow-y: auto;
 }
 #detail.show { transform: none; }
-#detail h2 { font-size: 16px; font-weight: 600; margin: 12px 0 4px; line-height: 1.35; font-family: 'Syne', sans-serif; }
+#detail h2 { font-size: 16px; font-weight: 600; margin: 12px 0 4px; line-height: 1.35; font-family: 'Space Grotesk', sans-serif; }
 #detail .close { position: absolute; top: 14px; right: 16px; }
 #detail .desc { white-space: pre-wrap; margin: 14px 0 18px; line-height: 1.6; font-size: 12px; }
 #detail dl { display: grid; grid-template-columns: 100px 1fr; gap: 7px 12px; font-size: 11px; }
@@ -317,11 +363,16 @@ footer .ver { background: var(--surface); border: 1px solid var(--border); borde
 <div class="stats" id="stats"></div>
 
 <div class="tabs">
-  <button class="tab active" data-tab="cal">Часовая сетка</button>
+  <button class="tab active" data-tab="month">Месяц</button>
+  <button class="tab" data-tab="cal">Часовая сетка</button>
   <button class="tab" data-tab="list">Список</button>
 </div>
 
-<div id="pane-cal" class="pane active">
+<div id="pane-month" class="pane active">
+  <div class="month-wrap" id="month-wrap"></div>
+</div>
+
+<div id="pane-cal" class="pane">
   <div class="cal-wrap" id="cal-wrap"></div>
   <div class="legend" id="legend"></div>
 </div>
@@ -348,7 +399,7 @@ footer .ver { background: var(--surface); border: 1px solid var(--border); borde
    GitHub Pages кэширует агрессивно; это единственный способ понять,
    какую ревизию человек реально видит.
    ══════════════════════════════════════════════════════════════════════ */
-const BUILD = "2026-08-12.1200";
+const BUILD = "2026-08-12.1730";
 
 /* ══════════════════════════════════════════════════════════════════════
    КОНФИГ — инстансы и типы живут здесь, а не в коде рендера.
@@ -362,7 +413,7 @@ const INSTANCES = [
 
 const TYPES = [
   { code: "marketing", label: "Маркетинг",   short: "MKT", bg: "#ece7ff", fg: "#6d28d9", ink: "#6d28d9" },
-  { code: "incident",  label: "Инцидент",    short: "INC", bg: "#e23b34", fg: "#ffffff", ink: "#d11f1f" },
+  { code: "incident",  label: "Инцидент",    short: "INC", bg: "#a4162a", fg: "#ffffff", ink: "#a4162a" },
   { code: "record",    label: "Рекорд",      short: "REC", bg: "#d6f3e4", fg: "#0a7d4f", ink: "#0a7d4f" },
   { code: "top_event", label: "Топ-событие", short: "TOP", bg: "#ffe9c2", fg: "#a86a00", ink: "#a86a00" },
   { code: "release",   label: "Релиз",       short: "REL", bg: "#dbe8ff", fg: "#2258c8", ink: "#2258c8" },
@@ -810,6 +861,7 @@ function parseTS(s) {
 const p2 = n => String(n).padStart(2, "0");
 const iso = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const mondayOf = d => { const x = startOfDay(d); return new Date(+x - ((x.getDay() + 6) % 7) * DAYMS); };
 const floorHour = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours());
 /* «событие на весь день» = покрывает хотя бы один полный календарный день (00:00→00:00).
    Такое не размазывается по 24 строкам, а поднимается в полосу над сеткой. */
@@ -853,7 +905,7 @@ const state = {
   instances: new Set(INSTANCES.map(i => i.code)),
   types: new Set(TYPES.map(t => t.code)),
   from: null, to: null, preset: "month",
-  sev: "", mode: "type", compactHours: false, tab: "cal",
+  sev: "", mode: "type", compactHours: false, tab: "month", _drilled: false,
   sort: { key: "start", dir: 1 },
 };
 
@@ -887,7 +939,7 @@ function readURL() {
   if (q.get("sev")) state.sev = q.get("sev");
   if (q.get("mode") === "heat") state.mode = "heat";
   if (q.get("hours") === "compact") state.compactHours = true;
-  if (q.get("tab") === "list") state.tab = "list";
+  const tb = q.get("tab"); if (tb === "list" || tb === "cal" || tb === "month") state.tab = tb;
 }
 function writeURL() {
   const q = new URLSearchParams();
@@ -901,7 +953,7 @@ function writeURL() {
   if (state.sev) q.set("sev", state.sev);
   if (state.mode !== "type") q.set("mode", state.mode);
   if (state.compactHours) q.set("hours", "compact");
-  if (state.tab !== "cal") q.set("tab", state.tab);
+  if (state.tab !== "month") q.set("tab", state.tab);
   const s = q.toString();
   history.replaceState(null, "", s ? "?" + s : location.pathname);
 }
@@ -916,15 +968,15 @@ function rangeBounds() {
   if (days > 120) b = new Date(+a + 119 * DAYMS);   // предохранитель от гигантской сетки
   return { a, b: new Date(+b + DAYMS) };            // b — эксклюзивная граница
 }
+function passesFilters(e) {
+  const minRank = sevRank(state.sev);
+  return e.instances.some(c => state.instances.has(c)) &&
+    state.types.has(e.type) &&
+    (!minRank || sevRank(e.severity) >= minRank);
+}
 function filtered() {
   const { a, b } = rangeBounds();
-  const minRank = sevRank(state.sev);
-  return DATA.filter(e =>
-    e.instances.some(c => state.instances.has(c)) &&
-    state.types.has(e.type) &&
-    e._s < b && e._eff >= a &&
-    (!minRank || sevRank(e.severity) >= minRank)
-  );
+  return DATA.filter(e => passesFilters(e) && e._s < b && e._eff >= a);
 }
 
 /* ── занятые ячейки (день × час) ───────────────────── */
@@ -972,10 +1024,6 @@ function bannerSpan(e, a, days) {
     clipR: e._open || eIdx > days - 1,                // открыто / продолжается правее диапазона
   };
 }
-function bannerTitle(e) {
-  return `${e.title}\n${fmtDT(e._s)} → ${e._open ? "идёт" : fmtDT(e._e)} · ${fmtDur(e._eff - e._s)}`
-       + (e.severity ? " · " + sevLbl(e.severity) : "") + (e.owner ? " · " + e.owner : "");
-}
 function buildBannerRows(bevs, a, days) {
   if (!bevs.length) return "";
   const items = bevs.map(e => bannerSpan(e, a, days))
@@ -1005,7 +1053,7 @@ function buildBannerRows(bevs, a, days) {
       const cc = ["abar", it.clipL ? "clip-l" : "", it.clipR ? "clip-r" : "",
                   sevRank(it.e.severity) === SEV_MAX_RANK ? "sev5" : ""].filter(Boolean).join(" ");
       out += `<td class="allday-cell" colspan="${it.last - it.first + 1}">`
-           + `<div class="${cc}" style="${style}" data-id="${esc(it.e.id)}" title="${esc(bannerTitle(it.e))}">`
+           + `<div class="${cc}" style="${style}" data-id="${esc(it.e.id)}">`
            + `<span class="flags">${flagsOf(it.e.instances)}</span>`
            + `<span class="abar-t">${esc(it.e.title)}</span></div></td>`;
       col = it.last + 1;
@@ -1117,7 +1165,7 @@ function buildCalendar(evs) {
         const style = `--tb:${t.bg};--tf:${t.fg};--tsev:${hexRGBA(t.fg, alpha)}`;
         const cc = ["chip", x.first ? "first" : "", x.last ? "last" : "",
                     sevRank(x.e.severity) === SEV_MAX_RANK ? "sev5" : "", x.e._open ? "open" : ""].filter(Boolean).join(" ");
-        html += `<div class="cslot"><div class="${cc}" style="${style}" data-id="${esc(x.e.id)}" title="${esc(x.e.title)}">`;
+        html += `<div class="cslot"><div class="${cc}" style="${style}" data-id="${esc(x.e.id)}">`;
         if (x.first) html += `<span class="flags">${flagsOf(x.e.instances)}</span><span class="code">${t.short}</span>`;
         html += "</div></div>";
       }
@@ -1126,10 +1174,102 @@ function buildCalendar(evs) {
     html += "</tr>";
   }
   html += "</tbody></table>";
+  const back = state._drilled ? '<button class="btn-accent mback" data-back>← К месяцу</button>' : "";
   document.getElementById("cal-wrap").innerHTML =
-    evs.length ? html : '<div class="empty-msg">Ничего не найдено. Снимите фильтры или расширьте период.</div>';
+    back + (evs.length ? html : '<div class="empty-msg">Ничего не найдено. Снимите фильтры или расширьте период.</div>');
 
   return cellMap;
+}
+
+/* ── месячный вид ───────────────────────────────────
+   Верхнеуровневая насыщенность + провал в час. сетку.
+   Полнодневные события — горизонтальные баннеры на неделю (Outlook-style),
+   таймовые — списком в ячейке дня; клик по дню открывает часовую сетку. */
+function buildMonth() {
+  const HEADER_H = 20, LANE_H = 17, TIMED_CAP = 3;
+  const { a, b } = rangeBounds();                    // выбранный период [a, b)
+  const gridStart = mondayOf(a);
+  const lastSel = new Date(+b - DAYMS);
+  const weeks = Math.round((+mondayOf(lastSel) - +gridStart) / (7 * DAYMS)) + 1;
+  const cells = weeks * 7;
+  const gridEnd = new Date(+gridStart + cells * DAYMS);
+
+  const evs = DATA.filter(e => passesFilters(e) && e._s < gridEnd && e._eff >= gridStart);
+  const banner = evs.filter(coversFullDay);
+  const timed  = evs.filter(e => !coversFullDay(e));
+  const todayISO = iso(NOW);
+  const dayIdx = d => Math.round((+startOfDay(d) - +gridStart) / DAYMS);
+
+  const timedByDay = {};
+  for (const e of timed) { const di = dayIdx(e._s); (timedByDay[di] = timedByDay[di] || []).push(e); }
+  for (const k in timedByDay) timedByDay[k].sort((x, y) => x._s - y._s);
+
+  const bspan = banner.map(e => {
+    const f = dayIdx(e._s), l = dayIdx(new Date(+e._eff - 1));
+    return { e, f, l, gClipL: f < 0, gClipR: e._open || l > cells - 1 };
+  });
+
+  const dayCount = new Array(cells).fill(0);
+  for (const e of timed) { const di = dayIdx(e._s); if (di >= 0 && di < cells) dayCount[di]++; }
+  for (const s of bspan) for (let i = Math.max(0, s.f); i <= Math.min(cells - 1, s.l); i++) dayCount[i]++;
+
+  const WD_MON = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  let html = '<div class="mgrid">';
+  for (let c = 0; c < 7; c++) html += `<div class="mwh${c >= 5 ? " we" : ""}">${WD_MON[c]}</div>`;
+
+  for (let w = 0; w < weeks; w++) {
+    const wStart = w * 7, wEnd = wStart + 6;
+    const inWeek = bspan.filter(s => s.l >= wStart && s.f <= wEnd).map(s => ({
+      ...s,
+      c0: Math.max(s.f, wStart) - wStart,
+      c1: Math.min(s.l, wEnd) - wStart,
+      clipL: s.f < wStart || s.gClipL,
+      clipR: s.l > wEnd || s.gClipR,
+    })).sort((p, q) => p.c0 - q.c0 || (q.c1 - q.c0) - (p.c1 - p.c0));
+    const laneEnd = [];
+    for (const s of inWeek) {
+      let ln = laneEnd.findIndex(en => en < s.c0);
+      if (ln === -1) { ln = laneEnd.length; laneEnd.push(s.c1); } else laneEnd[ln] = s.c1;
+      s.lane = ln;
+    }
+    const spaceH = laneEnd.length * LANE_H;
+
+    html += '<div class="mweek">';
+    for (let c = 0; c < 7; c++) {
+      const di = wStart + c, d = new Date(+gridStart + di * DAYMS);
+      const inSel = +startOfDay(d) >= +a && +startOfDay(d) < +b;
+      const today = iso(d) === todayISO, cnt = dayCount[di] || 0;
+      const busy = cnt >= 8 ? "busy4" : cnt >= 5 ? "busy3" : cnt >= 3 ? "busy2" : cnt >= 1 ? "busy1" : "";
+      const cls = ["mday", inSel ? "" : "oom", c >= 5 ? "we" : "", today ? "today" : "", busy].filter(Boolean).join(" ");
+      html += `<div class="${cls}" data-day="${iso(d)}">`;
+      html += `<div class="mdhead"><span class="mdnum">${d.getDate() === 1 ? `<span class="mdmo">${MONTHS[d.getMonth()]}</span> ` : ""}${d.getDate()}</span>${cnt ? `<span class="mdcnt">${cnt}</span>` : ""}</div>`;
+      html += `<div class="mbanner-space" style="height:${spaceH}px"></div><div class="mtimed">`;
+      const tl = timedByDay[di] || [], show = tl.slice(0, TIMED_CAP);
+      for (const e of show) {
+        const t = TYPE_BY[e.type] || { bg: "#333", fg: "#ccc" };
+        const style = `--tb:${t.bg};--tf:${t.fg};--tsev:${hexRGBA(t.fg, sevAlpha(e.severity))}`;
+        html += `<div class="mchip" style="${style}" data-id="${esc(e.id)}">`
+             +  `<span class="mtime">${fmtTime(e._s)}</span><span class="flags">${flagsOf(e.instances)}</span>`
+             +  `<span class="mtt">${esc(e.title)}</span></div>`;
+      }
+      if (tl.length > show.length) html += `<div class="m-more" data-day="${iso(d)}">+${tl.length - show.length} ещё</div>`;
+      html += "</div></div>";
+    }
+    for (const s of inWeek) {
+      const t = TYPE_BY[s.e.type] || { bg: "#333", fg: "#ccc" };
+      const style = `--tb:${t.bg};--tf:${t.fg};` + (s.clipL ? "" : `--tsev:${hexRGBA(t.fg, sevAlpha(s.e.severity))}`);
+      const cc = ["mbar", s.clipL ? "clip-l" : "", s.clipR ? "clip-r" : "",
+                  sevRank(s.e.severity) === SEV_MAX_RANK ? "sev5" : ""].filter(Boolean).join(" ");
+      const left = `calc(${s.c0}/7*100% + 2px)`, width = `calc(${s.c1 - s.c0 + 1}/7*100% - 4px)`;
+      html += `<div class="${cc}" style="${style};left:${left};width:${width};top:${HEADER_H + s.lane * LANE_H}px" `
+           +  `data-id="${esc(s.e.id)}">`
+           +  `<span class="flags">${flagsOf(s.e.instances)}</span>${esc(s.e.title)}</div>`;
+    }
+    html += "</div>";
+  }
+  html += "</div>";
+  document.getElementById("month-wrap").innerHTML = evs.length ? html
+    : '<div class="empty-msg">Ничего не найдено. Снимите фильтры или расширьте период.</div>';
 }
 
 /* ── легенда ───────────────────────────────────────── */
@@ -1153,7 +1293,7 @@ function buildStats(evs) {
   const cards = [
     { n: evs.length, l: "Событий в периоде", c: "var(--accent)" },
     { n: cnt("marketing"), l: "Маркетинг", c: "var(--marketing-fg)" },
-    { n: risky, l: "Инциденты + релизы", c: "#d93a2f" },
+    { n: risky, l: "Инциденты + релизы", c: "#a4162a" },
     { n: cnt("top_event"), l: "Топ-события", c: "var(--top-event-fg)" },
     { n: cnt("record"), l: "Рекорды", c: "var(--record-fg)" },
   ];
@@ -1228,6 +1368,13 @@ function buildList(evs) {
 /* ── тултип / карточка ─────────────────────────────── */
 let CELLMAP = {};
 const tt = document.getElementById("tooltip");
+function evTipRow(e) {
+  const t = TYPE_BY[e.type] || { label: e.type, fg: "#ccc" };
+  return `<div class="tt-ev">
+      <div class="tt-t" style="color:${t.ink || t.fg}">${flagsOf(e.instances)} ${esc(e.title)}</div>
+      <div class="tt-m">${esc(t.label)}${e.severity ? " · " + esc(sevLbl(e.severity)) : ""}${e.owner ? " · " + esc(e.owner) : ""}<br>
+      ${fmtDT(e._s)} → ${e._open ? "идёт" : fmtDT(e._e)} · ${fmtDur(e._eff - e._s)}</div></div>`;
+}
 function showTip(key, ev) {
   const items = CELLMAP[key] || [];
   if (!items.length) return;
@@ -1235,13 +1382,19 @@ function showTip(key, ev) {
   const d = parseTS(ds);
   document.getElementById("tt-head").textContent =
     `${WD[d.getDay()]} ${fmtDate(d)} · ${p2(h)}:00 MSK · ${items.length} соб.`;
-  document.getElementById("tt-body").innerHTML = items.map(({ e }) => {
-    const t = TYPE_BY[e.type] || { label: e.type, fg: "#ccc" };
-    return `<div class="tt-ev">
-      <div class="tt-t" style="color:${t.ink || t.fg}">${flagsOf(e.instances)} ${esc(e.title)}</div>
-      <div class="tt-m">${esc(t.label)}${e.severity ? " · " + esc(sevLbl(e.severity)) : ""}${e.owner ? " · " + esc(e.owner) : ""}<br>
-      ${fmtDT(e._s)} → ${e._open ? "идёт" : fmtDT(e._e)} · ${fmtDur(e._eff - e._s)}</div></div>`;
-  }).join("");
+  document.getElementById("tt-body").innerHTML = items.map(({ e }) => evTipRow(e)).join("");
+  tt.style.display = "block";
+  moveTip(ev);
+}
+/* стилизованный тултип для одиночного события (полоса «весь день», чипы месяца) —
+   вместо нативного белого title-окошка браузера */
+function showEvTip(e, ev) {
+  const sameDay = fmtDate(e._s) === fmtDate(new Date(+e._eff - 1));
+  document.getElementById("tt-head").textContent = e._open
+    ? `${fmtDate(e._s)} → идёт`
+    : sameDay ? fmtDate(e._s)
+    : `${fmtDate(e._s)} → ${fmtDate(new Date(+e._eff - 1))}`;
+  document.getElementById("tt-body").innerHTML = evTipRow(e);
   tt.style.display = "block";
   moveTip(ev);
 }
@@ -1294,6 +1447,7 @@ function render() {
   const evs = filtered();
   buildFilters();
   CELLMAP = buildCalendar(evs);
+  buildMonth();
   buildStats(evs);
   buildList(evs);
   buildLegend();
@@ -1301,6 +1455,14 @@ function render() {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === state.tab));
   document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === "pane-" + state.tab));
   document.getElementById("foot-count").textContent = `${DATA.length} событий в файле · показано ${evs.length}`;
+}
+
+/* провал в день → возврат к календарному месяцу этого дня */
+function expandDrilledToMonth() {
+  const d = state.from || NOW;
+  state.from = new Date(d.getFullYear(), d.getMonth(), 1);
+  state.to = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  state.preset = "month"; state._drilled = false;
 }
 
 /* ── события UI ────────────────────────────────────── */
@@ -1320,9 +1482,23 @@ document.addEventListener("click", ev => {
     return render();
   }
   const pr = ev.target.closest("[data-preset]");
-  if (pr) { applyPreset(pr.dataset.preset); return render(); }
+  if (pr) { applyPreset(pr.dataset.preset); state._drilled = false; return render(); }
   const tab = ev.target.closest(".tab");
-  if (tab) { state.tab = tab.dataset.tab; return render(); }
+  if (tab) {
+    state.tab = tab.dataset.tab;
+    if (state.tab === "month" && state._drilled) expandDrilledToMonth();
+    return render();
+  }
+  const mev = ev.target.closest(".mbar[data-id], .mchip[data-id]");
+  if (mev) { const e = byId(mev.dataset.id); if (e) openDetail(e); return; }
+  const mDay = ev.target.closest(".m-more[data-day], .mday[data-day]");
+  if (mDay) {
+    const d = parseTS(mDay.dataset.day);
+    state.from = startOfDay(d); state.to = startOfDay(d);
+    state.preset = null; state._drilled = true; state.tab = "cal";
+    return render();
+  }
+  if (ev.target.closest("[data-back]")) { expandDrilledToMonth(); state.tab = "month"; return render(); }
   const th = ev.target.closest("th[data-key]");
   if (th) {
     const k = th.dataset.key;
@@ -1344,8 +1520,11 @@ document.addEventListener("click", ev => {
   if (ev.target.closest("[data-close]") || ev.target === scrim) closeDetail();
 });
 document.addEventListener("mouseover", ev => {
+  const bar = ev.target.closest(".abar[data-id], .mbar[data-id], .mchip[data-id]");
+  if (bar) { const e = byId(bar.dataset.id); if (e) showEvTip(e, ev); return; }
   const cell = ev.target.closest("td.cell[data-k]");
-  if (cell) showTip(cell.dataset.k, ev); else if (!ev.target.closest("#tooltip")) hideTip();
+  if (cell) { showTip(cell.dataset.k, ev); return; }
+  if (!ev.target.closest("#tooltip")) hideTip();
 });
 document.addEventListener("mousemove", ev => { if (tt.style.display === "block") moveTip(ev); });
 document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDetail(); });
@@ -1360,7 +1539,7 @@ document.getElementById("f-hours").addEventListener("click", () => { state.compa
 document.getElementById("btn-reset").addEventListener("click", () => {
   state.instances = new Set(INSTANCES.map(i => i.code));
   state.types = new Set(TYPES.map(t => t.code));
-  state.sev = ""; state.mode = "type"; state.compactHours = false;
+  state.sev = ""; state.mode = "type"; state.compactHours = false; state._drilled = false;
   applyPreset("month"); render();
 });
 document.getElementById("btn-copy").addEventListener("click", async e => {
