@@ -161,6 +161,28 @@ td.cell.multi .chip .flags { font-size: 10px; letter-spacing: -0.5px; }
 .chip.sev5 { outline: 1px solid var(--tf); outline-offset: -1px; }
 .chip.open.last { border-bottom: 2px dashed var(--tf); }
 
+/* ── полоса «весь день» (баннеры полнодневных / многодневных событий) ── */
+.allday-row td { border-bottom: 1px solid var(--border); }
+.allday-lbl {
+  position: sticky; left: 0; z-index: 6; background: var(--bg);
+  font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+  text-align: right; padding: 0 8px 0 0; border-right: 1px solid var(--border); vertical-align: middle;
+}
+.allday-cell, .allday-gap { padding: 1px; vertical-align: middle; background: rgba(0,0,0,0.02); }
+.abar {
+  height: 18px; display: flex; align-items: center; gap: 4px; padding: 0 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2px; border-radius: 3px;
+  overflow: hidden; white-space: nowrap; cursor: pointer;
+  background: var(--tb); color: var(--tf); box-shadow: inset 3px 0 0 var(--tsev);
+  transition: filter 0.1s;
+}
+.abar:hover { filter: brightness(0.93); }
+.abar .flags { font-size: 12px; letter-spacing: -0.5px; flex: none; line-height: 1; }
+.abar .abar-t { overflow: hidden; text-overflow: ellipsis; }
+.abar.sev5 { outline: 1px solid var(--tf); outline-offset: -1px; }
+.abar.clip-l { border-left: 2px dashed var(--tf); border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: none; }
+.abar.clip-r { border-right: 2px dashed var(--tf); border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
 /* heatmap mode */
 td.heat-1 { background: rgba(254,80,0,0.10); }
 td.heat-2 { background: rgba(254,80,0,0.24); }
@@ -326,7 +348,7 @@ footer .ver { background: var(--surface); border: 1px solid var(--border); borde
    GitHub Pages кэширует агрессивно; это единственный способ понять,
    какую ревизию человек реально видит.
    ══════════════════════════════════════════════════════════════════════ */
-const BUILD = "2026-08-11.1154";
+const BUILD = "2026-08-12.1200";
 
 /* ══════════════════════════════════════════════════════════════════════
    КОНФИГ — инстансы и типы живут здесь, а не в коде рендера.
@@ -789,6 +811,13 @@ const p2 = n => String(n).padStart(2, "0");
 const iso = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const floorHour = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours());
+/* «событие на весь день» = покрывает хотя бы один полный календарный день (00:00→00:00).
+   Такое не размазывается по 24 строкам, а поднимается в полосу над сеткой. */
+function coversFullDay(e) {
+  const sd = startOfDay(e._s);
+  const firstMid = (+e._s === +sd) ? sd : new Date(+sd + DAYMS);
+  return +firstMid + DAYMS <= +e._eff;
+}
 const fmtDate = d => `${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}`;
 const fmtTime = d => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
 const fmtDT = d => `${fmtDate(d)} ${fmtTime(d)}`;
@@ -929,15 +958,79 @@ function assignLanes(evs, a, b) {
   return occ;
 }
 
+/* ── полоса «весь день»: раскладка и рендер баннеров ── */
+function bannerSpan(e, a, days) {
+  const sIdx = Math.round((+startOfDay(e._s) - +a) / DAYMS);
+  const lastMoment = new Date(+e._eff - 1);          // конец в 00:00 не заходит в следующий день
+  const eIdx = Math.round((+startOfDay(lastMoment) - +a) / DAYMS);
+  const first = Math.max(0, sIdx), last = Math.min(days - 1, eIdx);
+  return {
+    e,
+    first: Math.min(first, last),
+    last:  Math.max(first, last),
+    clipL: sIdx < 0,                                  // начинается левее видимого диапазона
+    clipR: e._open || eIdx > days - 1,                // открыто / продолжается правее диапазона
+  };
+}
+function bannerTitle(e) {
+  return `${e.title}\n${fmtDT(e._s)} → ${e._open ? "идёт" : fmtDT(e._e)} · ${fmtDur(e._eff - e._s)}`
+       + (e.severity ? " · " + sevLbl(e.severity) : "") + (e.owner ? " · " + e.owner : "");
+}
+function buildBannerRows(bevs, a, days) {
+  if (!bevs.length) return "";
+  const items = bevs.map(e => bannerSpan(e, a, days))
+    .filter(x => x.last >= 0 && x.first <= days - 1)
+    .sort((p, q) => p.first - q.first || (q.last - q.first) - (p.last - p.first));
+  if (!items.length) return "";
+  /* мини-дорожки: непересекающиеся баннеры делят одну строку, пересекающиеся — стопкой */
+  const laneEnd = [];
+  for (const it of items) {
+    let lane = laneEnd.findIndex(end => end < it.first);
+    if (lane === -1) { lane = laneEnd.length; laneEnd.push(it.last); } else laneEnd[lane] = it.last;
+    it.lane = lane;
+  }
+  const lanes = laneEnd.length;
+  let out = "";
+  for (let lane = 0; lane < lanes; lane++) {
+    out += '<tr class="allday-row">';
+    if (lane === 0) out += `<td class="hlbl allday-lbl" rowspan="${lanes}">весь день</td>`;
+    const row = items.filter(x => x.lane === lane).sort((p, q) => p.first - q.first);
+    let col = 0;
+    for (const it of row) {
+      if (it.first > col) out += `<td class="allday-gap" colspan="${it.first - col}"></td>`;
+      const t = TYPE_BY[it.e.type] || { bg: "#333", fg: "#ccc" };
+      const alpha = sevAlpha(it.e.severity);
+      // левую планку критичности показываем только там, где событие реально начинается
+      const style = `--tb:${t.bg};--tf:${t.fg};` + (it.clipL ? "" : `--tsev:${hexRGBA(t.fg, alpha)}`);
+      const cc = ["abar", it.clipL ? "clip-l" : "", it.clipR ? "clip-r" : "",
+                  sevRank(it.e.severity) === SEV_MAX_RANK ? "sev5" : ""].filter(Boolean).join(" ");
+      out += `<td class="allday-cell" colspan="${it.last - it.first + 1}">`
+           + `<div class="${cc}" style="${style}" data-id="${esc(it.e.id)}" title="${esc(bannerTitle(it.e))}">`
+           + `<span class="flags">${flagsOf(it.e.instances)}</span>`
+           + `<span class="abar-t">${esc(it.e.title)}</span></div></td>`;
+      col = it.last + 1;
+    }
+    if (col < days) out += `<td class="allday-gap" colspan="${days - col}"></td>`;
+    out += "</tr>";
+  }
+  return out;
+}
+
 /* ── сетка ─────────────────────────────────────────── */
 function buildCalendar(evs) {
   const { a, b } = rangeBounds();
   const days = Math.max(1, Math.round((b - a) / DAYMS));
   const dates = Array.from({ length: days }, (_, i) => new Date(+a + i * DAYMS));
-  const occ = assignLanes(evs, a, b);
+  /* полнодневные / многодневные — в полосу над сеткой; остальные — в часовые ячейки.
+     heat-режим тоже опирается на gridEvs: длинная кампания больше не «греет» все
+     ячейки подряд, поэтому насыщенность читается по реальным точечным событиям. */
+  const bannerEvs = evs.filter(coversFullDay);
+  const gridEvs   = evs.filter(e => !coversFullDay(e));
+
+  const occ = assignLanes(gridEvs, a, b);
 
   const cellMap = {};                       // "YYYY-MM-DD|H" → [{e, lane, first, last}]
-  for (const e of evs) {
+  for (const e of gridEvs) {
     const { cells, lane } = occ.get(e.id);
     const byDay = new Map();
     for (const t of cells) {
@@ -989,6 +1082,7 @@ function buildCalendar(evs) {
     prevMo = mo;
   });
   html += "</tr></thead><tbody>";
+  html += buildBannerRows(bannerEvs, a, days);
 
   for (const h of hours) {
     const night = h >= 1 && h <= 6;
@@ -1046,6 +1140,7 @@ function buildLegend() {
   h += `<div class="leg-item" style="margin-left:8px">${INSTANCES.map(i => i.marker).join(" ")} — флаги инстансов на чипе</div>`;
   h += `<div class="leg-item">Левая планка события = критичность</div>`;
   h += `<div class="leg-item">Событие с флагами = час начала</div>`;
+  h += `<div class="leg-item">Полоса «весь день» = событие на ≥ 1 полный день, поднято над сеткой</div>`;
   document.getElementById("legend").innerHTML = h;
 }
 
@@ -1234,6 +1329,8 @@ document.addEventListener("click", ev => {
     state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : 1 };
     return buildList(filtered());
   }
+  const abar = ev.target.closest(".abar[data-id]");
+  if (abar) { const e = byId(abar.dataset.id); if (e) { hideTip(); openDetail(e); } return; }
   const chip = ev.target.closest(".chip[data-id]");
   if (chip) { const e = byId(chip.dataset.id); if (e) { hideTip(); openDetail(e); } return; }
   const row = ev.target.closest("tr[data-id]");
